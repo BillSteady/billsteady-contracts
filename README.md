@@ -1,7 +1,7 @@
 # BillSteady Contracts
 
 The Soroban "jar" smart contract for
-[BillSteady](https://github.com/bytescape30/billsteady-web): a non-custodial,
+[BillSteady](https://github.com/BillSteady/billsteady-web): a non-custodial,
 user-signed savings jar on Stellar. Users save daily toward a bill; the
 contract never gives an admin function the power to move user funds.
 
@@ -9,7 +9,7 @@ contract never gives an admin function the power to move user funds.
 
 This is Phase 3 of the PRD, ahead of the PRD's own sequencing (it was meant
 to start after Phase 0-2 prove the naira planner and bill-pay flow with real
-users — see [billsteady-web's roadmap](https://github.com/bytescape30/billsteady-web/blob/main/docs/ROADMAP.md)).
+users — see [billsteady-web's roadmap](https://github.com/BillSteady/billsteady-web/blob/main/docs/ROADMAP.md)).
 It's built now because it needs no external account to start, only the Rust
 toolchain, and lives in its own repo precisely so it has an isolated surface
 for the external audit the PRD requires before any mainnet deploy — which
@@ -148,8 +148,8 @@ contract is safe to hold real money. No audit has happened.
 
 ## Related repos
 
-- [billsteady-web](https://github.com/bytescape30/billsteady-web) — the planner PWA
-- [billsteady-backend](https://github.com/bytescape30/billsteady-backend) — Supabase backend
+- [billsteady-web](https://github.com/BillSteady/billsteady-web) — the planner PWA
+- [billsteady-backend](https://github.com/BillSteady/billsteady-backend) — Supabase backend
 
 ## License
 

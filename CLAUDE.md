@@ -4,8 +4,8 @@ The Soroban jar contract for BillSteady. Non-custodial: the user's wallet
 signs every deposit/withdraw/pay_out. No admin function may move user funds.
 
 This repo is one of three:
-- [billsteady-web](https://github.com/bytescape30/billsteady-web): the planner PWA
-- [billsteady-backend](https://github.com/bytescape30/billsteady-backend): Supabase backend
+- [billsteady-web](https://github.com/BillSteady/billsteady-web): the planner PWA
+- [billsteady-backend](https://github.com/BillSteady/billsteady-backend): Supabase backend
 - **billsteady-contracts** (this repo): the Soroban jar contract (Rust)
 
 ## Stack
