@@ -5,7 +5,7 @@ The Soroban "jar" smart contract for
 user-signed savings jar on Stellar. Users save daily toward a bill; the
 contract never gives an admin function the power to move user funds.
 
-## Status: written and tested, UNAUDITED, UNDEPLOYED
+## Status: written, tested, and proven end-to-end on testnet. UNAUDITED, NOT ON MAINNET.
 
 This is Phase 3 of the PRD, ahead of the PRD's own sequencing (it was meant
 to start after Phase 0-2 prove the naira planner and bill-pay flow with real
@@ -13,7 +13,9 @@ users — see [billsteady-web's roadmap](https://github.com/bytescape30/billstea
 It's built now because it needs no external account to start, only the Rust
 toolchain, and lives in its own repo precisely so it has an isolated surface
 for the external audit the PRD requires before any mainnet deploy — which
-has **not** happened. Nothing here has touched testnet or mainnet.
+has **not** happened. The contract has been deployed and exercised on
+**testnet** (see below) but has never touched mainnet, and testnet proof is
+not a substitute for an audit.
 
 ### What exists
 
@@ -83,14 +85,58 @@ current SDK before deploying) implementing:
   payee addresses allowlisted (no arbitrary-contract-call surface); no TTL
   used as a security mechanism.
 
+### Testnet deployment (Prompt 3.2)
+
+Real, independently-verified run on Stellar testnet — not a simulation.
+`jar/scripts/testnet-demo.sh` reproduces this: it issues a fresh test asset,
+wraps it in a Stellar Asset Contract (SAC), deploys the jar contract, and
+runs `create_jar` → `deposit` → `pay_out` → `withdraw` against the real
+network, generating fresh throwaway identities each run.
+
+The run recorded below used:
+- Jar contract: [`CD62QGT7F4QGECGRS6KN5IOXB2ZPOI7FCPBU2DSUGIFIUC4YC5ZG2V62`](https://stellar.expert/explorer/testnet/contract/CD62QGT7F4QGECGRS6KN5IOXB2ZPOI7FCPBU2DSUGIFIUC4YC5ZG2V62)
+- Test token (SAC-wrapped TESTUSDC): [`CAU6NM62R7UHVFR5WQ7Y5I7ODZEEWE7U2DF7JRIKILWIAAYSZQULHJM4`](https://stellar.expert/explorer/testnet/contract/CAU6NM62R7UHVFR5WQ7Y5I7ODZEEWE7U2DF7JRIKILWIAAYSZQULHJM4)
+
+| Step | Tx hash |
+|---|---|
+| SAC deploy | [`a7adead9bc421cfe098fbfb5a59562dae1149af362014a2d682dbe022fd2d517`](https://stellar.expert/explorer/testnet/tx/a7adead9bc421cfe098fbfb5a59562dae1149af362014a2d682dbe022fd2d517) |
+| Jar wasm upload | [`9238e4ae4424932e54f6b44f26e81e8e91458265714ec0b74cc6d12849d231bf`](https://stellar.expert/explorer/testnet/tx/9238e4ae4424932e54f6b44f26e81e8e91458265714ec0b74cc6d12849d231bf) |
+| Jar deploy + init | [`d8da182aebdcc34e9203d8c3317862be8b34b2865833ed5fb1337de1c0e21c22`](https://stellar.expert/explorer/testnet/tx/d8da182aebdcc34e9203d8c3317862be8b34b2865833ed5fb1337de1c0e21c22) |
+| `create_jar` | [`2029b01d6d893ef7192afa8c8382a798bea4281a5f4fcd322c26d4db40f25e6d`](https://stellar.expert/explorer/testnet/tx/2029b01d6d893ef7192afa8c8382a798bea4281a5f4fcd322c26d4db40f25e6d) |
+| `deposit` 20 TESTUSDC | [`d4ff8fc58e8f2752d3176ff03510480146ace5b2029af9ffe0298c83e8befcea`](https://stellar.expert/explorer/testnet/tx/d4ff8fc58e8f2752d3176ff03510480146ace5b2029af9ffe0298c83e8befcea) |
+| `pay_out` 5 TESTUSDC to allowlisted payee | [`6841ddc9feb1e96b10a73abc188a5c9031a54e9ef2b9132bb4edaab4bde8ae26`](https://stellar.expert/explorer/testnet/tx/6841ddc9feb1e96b10a73abc188a5c9031a54e9ef2b9132bb4edaab4bde8ae26) |
+| `withdraw` 3 TESTUSDC to owner | [`4b34332aed180dd61856700d8456255beb69c9a97017288a04cfcbff7313e0dc`](https://stellar.expert/explorer/testnet/tx/4b34332aed180dd61856700d8456255beb69c9a97017288a04cfcbff7313e0dc) |
+
+Independently confirmed after the run (not just trusting the CLI's "Success"
+output): `get_jar` read back `balance: 120000000` (20 deposited − 5 paid out
+− 3 withdrawn = 12 remaining, at 7 decimals), and the payee's and owner's
+**real classic-asset balances on Horizon** moved by exactly the paid-out and
+withdrawn amounts — confirming the SAC transfer moved real underlying
+balance, not just emitted an event.
+
+This run hit one real bug in the setup (not the contract): the payee
+account had no trustline to TESTUSDC yet, so the first `pay_out` attempt
+failed with a genuine `trustline entry is missing` error from the SAC. Fixed
+by creating the trustline before retrying — included in the script now.
+
+This exercised the **"jar not locked" withdraw path** (`create_jar` with
+`locked=false`), not the 24-hour early-release-delay path
+(`request_early_release` → `claim_early_release`) — that path is covered by
+`cargo test` with simulated ledger time, since waiting 24 real hours isn't
+practical for a demo script. Worth running once against a real elapsed 24h
+window before an audit, not just in the simulated test env.
+
+**What this proves:** the contract behaves correctly against the real
+Soroban host and network — auth, token transfers, and storage all work as
+designed outside the unit-test sandbox. **What it doesn't prove:** that the
+contract is safe to hold real money. No audit has happened.
+
 ### What was not verified (be honest about this before trusting it)
 
 - **No external audit.** Required before any mainnet deploy per the PRD —
   has not started.
-- **Not deployed to testnet.** `cargo test` runs the contract logic against
-  `soroban-sdk`'s simulated `Env`, not a real ledger. Deploying to testnet
-  and running a create → deposit → pay_out → withdraw script end-to-end
-  (Prompt 3.2 in the PRD) hasn't happened yet.
+- **The 24h early-release-delay path hasn't been exercised against real
+  elapsed time**, only simulated ledger time in `cargo test` (see above).
 - **No static analysis tooling run** (Scout, OpenZeppelin's detector SDK) —
   recommended by this skill's security guide before requesting an audit.
 - **No fuzz or property testing** on `deposit`/`withdraw`/`pay_out` — the
