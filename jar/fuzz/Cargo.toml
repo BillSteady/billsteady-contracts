@@ -1,0 +1,43 @@
+[package]
+name = "billsteady-jar-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+# Standalone workspace root: without this, Cargo treats `jar/` as this
+# crate's implicit workspace root and the fuzz build inherits jar/Cargo.toml's
+# [profile.release] — notably `panic = "abort"`, which is required for the
+# no_std contract build but is incompatible with AddressSanitizer's unwinding
+# requirements and fails to link ("initializer pointer has no target").
+[workspace]
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+soroban-sdk = { version = "27", features = ["testutils"] }
+
+[dependencies.billsteady-jar]
+path = ".."
+
+[[bin]]
+name = "fuzz_deposit"
+path = "fuzz_targets/fuzz_deposit.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "fuzz_withdraw"
+path = "fuzz_targets/fuzz_withdraw.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "fuzz_pay_out"
+path = "fuzz_targets/fuzz_pay_out.rs"
+test = false
+doc = false
+bench = false

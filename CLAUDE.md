@@ -33,6 +33,10 @@ This repo is one of three:
 - External audit required before any mainnet deploy — no exceptions.
 
 ## Current phase
-Not started. No external account needed to begin — only the Rust/Soroban
-toolchain. Sequenced after billsteady-web's naira planner and
-billsteady-backend's bill-pay flow prove out, per the PRD's own ordering.
+Contract written, 45/45 tests passing (39 example-based + 6 property-based),
+proven end-to-end on Stellar testnet. UNAUDITED, UNDEPLOYED to mainnet.
+Pre-audit hardening attempted: static analysis (Scout, OpenZeppelin
+detector SDK) and fuzz testing (cargo-fuzz) both blocked by real tooling/
+environment issues documented in README.md — not skipped, just honestly
+incomplete. See README.md's "What was not verified" for the precise state
+before trusting this with real money.

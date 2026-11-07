@@ -12,6 +12,7 @@ soroban-sdk = "27"
 
 [dev-dependencies]
 soroban-sdk = { version = "27", features = ["testutils"] }
+proptest = "1"
 
 [profile.release]
 opt-level = "z"

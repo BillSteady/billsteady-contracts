@@ -6,6 +6,7 @@ use soroban_sdk::{
 };
 
 mod test;
+mod property_test;
 
 /// Early-release delay: a locked jar's owner can request early release, then
 /// must wait this long before the jar actually unlocks. Gives the product a

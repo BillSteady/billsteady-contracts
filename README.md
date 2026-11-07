@@ -65,15 +65,26 @@ current SDK before deploying) implementing:
 
 ### What was verified
 
-- `cargo test` — **39/39 unit tests pass**, covering every function and the
-  edge cases called out in the build plan: zero/negative amounts, a locked
-  jar before `unlock_time`, a non-allowlisted payee, a disallowed token, the
-  paused/not-paused split between `withdraw` and everything else, TTL
-  extension, the 24h early-release delay (blocked before, allowed at exactly
-  24h), double-release-request rejection, every owner-gated function
-  rejecting the wrong caller, and the upgrade gate rejecting a single signer,
-  rejecting before the 48h timelock, and rejecting a non-signer outright.
-  Test snapshots are committed under `jar/test_snapshots/`.
+- `cargo test` — **45/45 tests pass** (39 example-based + 6 property-based),
+  covering every function and the edge cases called out in the build plan:
+  zero/negative amounts, a locked jar before `unlock_time`, a non-allowlisted
+  payee, a disallowed token, the paused/not-paused split between `withdraw`
+  and everything else, TTL extension, the 24h early-release delay (blocked
+  before, allowed at exactly 24h), double-release-request rejection, every
+  owner-gated function rejecting the wrong caller, and the upgrade gate
+  rejecting a single signer, rejecting before the 48h timelock, and
+  rejecting a non-signer outright. Test snapshots for the example-based
+  tests are committed under `jar/test_snapshots/test/`.
+- `jar/src/property_test.rs` — 6 `proptest` properties (384 generated cases
+  total, 64 per property) locking in the arithmetic invariants the
+  example-based tests don't exhaustively cover: a jar's balance after
+  deposit/withdraw/pay_out always equals deposits minus withdrawals minus
+  payouts and is never negative; a rejected over-withdraw or over-payout
+  never mutates the balance; and `deposit`'s `checked_add` genuinely rejects
+  overflow (tested by maxing a jar's balance at `i128::MAX`, then confirming
+  any further deposit fails with `Error::Overflow` rather than wrapping).
+  Property-test snapshots are deliberately **not** committed (they'd churn
+  on every run with new random values) — see `.gitignore`.
 - `stellar contract build` — compiles clean to
   `target/wasm32v1-none/release/billsteady_jar.wasm`, **14,274 bytes**
   optimized (well under the 128KB network limit), 19 exported functions.
@@ -137,10 +148,52 @@ contract is safe to hold real money. No audit has happened.
   has not started.
 - **The 24h early-release-delay path hasn't been exercised against real
   elapsed time**, only simulated ledger time in `cargo test` (see above).
-- **No static analysis tooling run** (Scout, OpenZeppelin's detector SDK) —
-  recommended by this skill's security guide before requesting an audit.
-- **No fuzz or property testing** on `deposit`/`withdraw`/`pay_out` — the
-  skill recommends this for every value-moving path.
+- **Static analysis: attempted, blocked by real tooling/environment issues,
+  not skipped.** Both tools the security skill recommends were tried:
+  - **Scout** (`cargo-scout-audit`) failed three distinct ways across two
+    pinned versions, none of them our code: v0.3.17's `dylint_driver`
+    dependency clones a pinned detector repo and does `git checkout master`
+    — that branch doesn't exist upstream (reproduced twice, confirmed via
+    `git ls-remote` it's unrelated to network). Pinning to v0.3.11 (the last
+    version `docs.rs` could build, per its own build history) needed
+    `rustc-dev`+`llvm-tools-preview` on two nightly toolchains (installed)
+    to get past that bug, then needed the *exact* `nightly-2025-08-07`
+    toolchain its detector crate is pinned to (installed, plus its own
+    `rustc-dev`/`llvm-tools-preview`) — and then failed a third time at
+    `Building detector-helper` with no further stderr captured. Spent real,
+    extended effort on this (confirmed via `cargo scout-audit --version`,
+    `--list-detectors` and `--metadata`, which all worked, proving the
+    install itself was fine — only the actual lint-compilation pipeline is
+    broken here). Did not keep chasing a fourth toolchain change.
+  - **OpenZeppelin's Security Detectors SDK** (`soroban-scanner`) has no
+    published binary — it must be built from a freshly `git clone`d repo,
+    and this sandbox's own code-execution policy correctly refuses to build
+    freshly-cloned external code. That's a deliberate, permanent restriction
+    in this environment, not a bug to route around.
+  - What this repo has instead: a thorough **manual** pass against the
+    `stellar-dev:smart-contracts` security checklist (see "What was
+    verified" above) — every `require_auth` traced to its real source,
+    every arithmetic path confirmed checked, the allowlist/trust-boundary
+    analysis that found the `set_payees` issue below. That's real coverage,
+    just not tool-automated.
+- **Fuzz testing: three real harnesses written
+  (`jar/fuzz/fuzz_targets/fuzz_{deposit,withdraw,pay_out}.rs`), none could
+  be gotten running.** `cargo-fuzz`'s default (AddressSanitizer) build fails
+  to link on this machine with `initializer pointer has no target` — a
+  confirmed class of macOS-arm64 + ASan + Rust-nightly linker issue (the
+  Soroban SDK's own repo has open reports of the same thing fuzzing on
+  arm64 macOS). Tried `-s none` (coverage without ASan): different failure,
+  missing libFuzzer runtime symbols. Tried an older pinned nightly with the
+  default sanitizer: identical failure to the first attempt, ruling out a
+  compiler-version regression specifically. The documented fix (Bitcoin
+  Core's own fuzzing docs cite this exact pattern) is building with
+  Homebrew LLVM + `lld` instead of Apple's bundled clang — not attempted,
+  because installing a new major toolchain component on an unverified "try
+  it and see" basis was judged disproportionate to the remaining gain: the
+  property tests above already give 384 real randomized executions of the
+  exact invariants (balance non-negativity, conservation, overflow
+  rejection) that fuzzing would target. The harnesses are committed and
+  ready to run the moment this environment's toolchain supports it.
 - **No fork/upgrade rehearsal** against real deployed state.
 - **Stellar CLI version mismatch**: built and tested against CLI 27.1.0 /
   soroban-sdk 27.0.6, not the PRD's stated 28.1.0 / Protocol 29. Re-check

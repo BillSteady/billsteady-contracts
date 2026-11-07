@@ -8,17 +8,17 @@ use soroban_sdk::{
     Address, Bytes, Env, Vec,
 };
 
-struct Harness<'a> {
-    env: Env,
-    client: JarContractClient<'a>,
-    token: Address,
-    token_admin: StellarAssetClient<'a>,
-    oper_admin: Address,
-    signers: std::vec::Vec<Address>,
-    payee: Address,
+pub(crate) struct Harness<'a> {
+    pub(crate) env: Env,
+    pub(crate) client: JarContractClient<'a>,
+    pub(crate) token: Address,
+    pub(crate) token_admin: StellarAssetClient<'a>,
+    pub(crate) oper_admin: Address,
+    pub(crate) signers: std::vec::Vec<Address>,
+    pub(crate) payee: Address,
 }
 
-fn setup() -> Harness<'static> {
+pub(crate) fn setup() -> Harness<'static> {
     let env = Env::default();
     env.mock_all_auths();
 
@@ -67,7 +67,7 @@ fn setup() -> Harness<'static> {
     }
 }
 
-fn fund(h: &Harness, who: &Address, amount: i128) {
+pub(crate) fn fund(h: &Harness, who: &Address, amount: i128) {
     h.token_admin.mint(who, &amount);
 }
 

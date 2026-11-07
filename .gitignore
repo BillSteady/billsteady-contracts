@@ -2,3 +2,8 @@ target/
 .DS_Store
 *.log
 .soroban
+
+# Property tests run many generated cases (64 per property) and would churn
+# these on every run with new random values - only commit snapshots for the
+# deterministic example-based tests in src/test.rs.
+jar/test_snapshots/property_test/
