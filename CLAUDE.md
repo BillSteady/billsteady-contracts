@@ -40,10 +40,11 @@ Stellar/stablecoin bill-pay app. This repo now has two contracts:
 - require_auth on every fund-moving call. No admin function can move a
   payer's funds without the payer's own signature.
 - Checked arithmetic, no zero or negative amounts.
-- A single admin key is accepted risk for v1 (can misdirect future
-  payments, can never steal — see `router/README.md`'s trust-boundary
-  section) — revisit with a signer threshold before real payment volume
-  depends on it.
+- `set_settlement_address` requires a 2-of-3 signer threshold (see
+  `router/README.md`'s trust-boundary section for why single-transaction
+  multisig, not jar's propose/approve/timelock pattern) — a compromised
+  signer can misdirect future payments for a biller, never steal already-
+  paid funds, never touch `pay`'s payer-auth requirement.
 
 ## Workflow
 - Write cargo tests first for every function and edge case, then implement.
@@ -56,12 +57,21 @@ Stellar/stablecoin bill-pay app. This repo now has two contracts:
 - External audit required before any mainnet deploy — no exceptions.
 
 ## Current phase
-`router/`: written, 11/11 tests passing, proven end-to-end on Stellar
-testnet (real tx hashes, independently confirmed on Horizon, including the
-real negative-auth-case proof). UNAUDITED, UNDEPLOYED to mainnet. No
+`router/`: written, 18/18 tests passing (2-of-3 signer threshold on
+`set_settlement_address`, added after the initial single-admin version),
+proven end-to-end on Stellar testnet for `pay` and for threshold
+*rejection* (real tx hashes / real simulation errors, independently
+confirmed). Threshold *success* is proven in `cargo test` against the real
+soroban-sdk auth framework but not yet independently confirmed via a
+standalone live-testnet transaction — blocked on a Stellar CLI 27.1.0
+limitation submitting multi-party Soroban auth, documented precisely in
+`router/README.md`, not glossed over. UNAUDITED, UNDEPLOYED to mainnet. No
 static analysis or fuzz testing run on it yet (see issues #2/#3's history
 on `jar/` for what that process looks like in this environment, and
-`router/README.md`'s "What was not verified").
+`router/README.md`'s "What was not verified"). Current contract ID:
+`CDYSRZEQ5SN75PUWOTZ23P5CUNWCXAEJM74IMJTEIA47VFLIURJ2SPGM` (supersedes the
+earlier single-admin `CA5VHLWTG7UXT6MKYWRMAVXSQ3J4SQFBG2RQVBYUKBAPHUTO7XEPQMOA`
+— non-upgradeable by design, so this was a fresh deploy, not an upgrade).
 
 `jar/`: archived but intact — 45/45 tests, testnet-proven, same
 unaudited/undeployed status. Not part of the active product.

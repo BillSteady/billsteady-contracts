@@ -9,11 +9,16 @@ directly from a Stellar wallet, in XLM or USDC, non-custodially.
 A thin, non-upgradeable contract: one function moves a payer's own
 XLM/USDC straight to a registered settlement address for a specific
 biller, in a single atomic transfer. The contract never holds a balance at
-any point. **11/11 tests pass, proven end-to-end on testnet** (real
-transaction hashes, independently confirmed on Horizon, including a real
-negative-case proof that an attacker cannot forge a payer's authorization)
-— see [`router/README.md`](router/README.md) for the full detail, the
-exact event shape (`billsteady-backend` depends on it), and the admin
+any point. The admin action (registering a biller's settlement address)
+requires a 2-of-3 signer threshold, not a single key. **18/18 tests pass**,
+proven on real testnet for `pay` and for threshold rejection (real tx
+hashes / real simulation errors, independently confirmed) — threshold
+*success* is proven against the real soroban-sdk auth framework in
+`cargo test` but not yet independently confirmed via a standalone live
+transaction, blocked on a specific Stellar CLI 27.1.0 limitation,
+documented precisely rather than glossed over — see
+[`router/README.md`](router/README.md) for the full detail, the exact
+event shape (`billsteady-backend` depends on it), and the admin
 trust-boundary decision.
 
 ## Archived: [`jar/`](jar/README.md) — the pre-pivot savings jar
