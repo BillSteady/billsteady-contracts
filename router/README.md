@@ -28,7 +28,10 @@ pay(payer: Address, token: Address, amount: i128, biller_id: Symbol, order_ref: 
 ```
 
 Event on success: `BillPaid { payer: Address, biller_id: Symbol, order_ref: BytesN<32>, amount: i128 }`
-— topics are `("BillPaid", payer, biller_id)`, data is `(order_ref, amount)`.
+— topics are `("bill_paid", payer, biller_id)` (the event name topic is the
+lowercase `#[contractevent(topics = ["bill_paid"])]` value, not the
+PascalCase struct name — confirmed against the deployed interface via
+`stellar contract info interface`, not assumed), data is `(order_ref, amount)`.
 `billsteady-backend` indexes this event and must never call VTpass to pay a
 biller until it's seen — that's what keeps "non-custodial" true in
 practice, not just in copy.
